@@ -4,19 +4,57 @@
 
 name: TechScale CI
 
-# TODO 1: Define when this pipeline runs.
-# It should trigger on push to main and on pull requests targeting main.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
 
-  # TODO 2: lint job
-  # Runs on the latest Ubuntu runner. Checks out the code, sets up Python 3.11,
-  # installs flake8, and lints the app/ directory with a max line length of 100.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # TODO 3: test job
-  # Runs only after lint passes. Checks out the code, sets up Python 3.11,
-  # installs dependencies, and runs the test suite under app/tests/.
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-  # TODO 4: build job
-  # Runs only after tests pass. Checks out the code and builds the Docker image,
-  # tagging it with the current commit SHA.
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint app
+        run: flake8 app/ --max-line-length=100
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest app/tests/
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t techscale:${{ github.sha }} .
